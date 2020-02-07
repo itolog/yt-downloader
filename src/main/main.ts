@@ -1,7 +1,12 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, IpcMainEvent } from 'electron';
 import * as path from 'path';
 import * as isDev from 'electron-is-dev';
 import 'electron-reload';
+
+import template from './Menu/menu';
+import VideoService from './Video/video.service';
+
+const videoService = new VideoService();
 
 let mainWindow: BrowserWindow | null;
 
@@ -21,10 +26,17 @@ function createWindow() {
       : `file://${path.join(__dirname, '../build/index.html')}`,
   );
 
+  //  MENU
+  const menu = Menu.buildFromTemplate(template(app, mainWindow));
+  Menu.setApplicationMenu(menu);
+
+  //
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
+
+app.allowRendererProcessReuse = true;
 
 app.on('ready', createWindow);
 
@@ -38,4 +50,14 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow();
   }
+});
+
+
+ipcMain.on('send-ytb-url', async (event: IpcMainEvent, url: string) => {
+ await videoService.download(url).then((res) => {
+    console.log(res);
+    mainWindow?.webContents.send('video-info', res)
+  }).catch((e) => {
+    console.log(e.message);
+  });
 });

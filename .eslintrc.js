@@ -80,6 +80,7 @@ module.exports = {
     'no-restricted-properties': 0,
     'no-param-reassign': 0,
     'no-shadow': 0,
+    'no-useless-constructor': 0,
     'no-prototype-builtins': 0,
     'no-multiple-empty-lines': 0,
     'no-else-return': 0,
