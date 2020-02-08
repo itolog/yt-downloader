@@ -7,12 +7,10 @@ import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import CircularProgress from '@material-ui/core/CircularProgress';
 import Alert from '@material-ui/lab/Alert';
 import LinearProgress from '@material-ui/core/LinearProgress';
+import Avatar from '@material-ui/core/Avatar';
+
 // style
 import './App.css';
 
@@ -31,40 +29,60 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     justifyContent: 'space-around',
   },
-  error: {
+  alert: {
     position: 'fixed',
     top: 0,
   },
   loadingSection: {
     minHeight: 150,
-  }
+  },
+  progressSection: {
+    width: '80%',
+    height: '40px',
+  },
+  progressSectionInfo: {
+    display: 'flex',
+    justifyContent: 'space-around',
+  },
+  videoInfo: {
+    width: '80%',
+    display: 'flex',
+    justifyContent: 'space-around',
+  },
 });
 
 const App: React.FC = () => {
   const classes = useStyles();
   const [inputValue, setInputValue] = useState('');
-  const [startLoading, setStartLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [isStartLoading, setIsStartLoading] = useState(false);
   const [errorLoading, setErrorLoading] = useState('');
+  const [isDownloadDone, setIsDownloadDone] = useState(false);
   const [percents, setPercents] = useState(0);
   const [videoInfo, setVideoInfo] = useState({
     title: '',
     duration: '',
-    tumbnail: '',
+    avatar: '',
   });
 
   const progressStatPercents = (ms: number, infoSeconds: number) => {
     const takeMs = moment.duration(ms).asMilliseconds();
-    return Math.round((takeMs / (infoSeconds * 1000) * 100))
+    return Math.round((takeMs / (infoSeconds * 1000) * 100));
   };
 
   useEffect(() => {
     ipcRenderer.on('video:info', (e: Electron.IpcRendererEvent, data: any) => {
       console.log(data);
       setVideoInfo(data.videoInfo);
-      setStartLoading(false);
+      setLoading(false);
       setErrorLoading('');
 
-      setPercents(progressStatPercents(data.progress.timemark, data.videoInfo.duration))
+      setPercents(progressStatPercents(data.progress.timemark, data.videoInfo.duration));
+    });
+
+    ipcRenderer.on('video:end', () => {
+      setIsStartLoading(false);
+      setIsDownloadDone(true);
     });
 
     ipcRenderer.on('video:download-error', (e: Electron.IpcRendererEvent, error: string) => {
@@ -78,8 +96,12 @@ const App: React.FC = () => {
 
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
-    setStartLoading(true);
-    ipcRenderer.send('send-ytb-url', inputValue);
+    if (inputValue.length > 0) {
+      setIsDownloadDone(false);
+      setLoading(true);
+      setIsStartLoading(true);
+      ipcRenderer.send('send-ytb-url', inputValue);
+    }
   };
 
   return (
@@ -92,7 +114,10 @@ const App: React.FC = () => {
         justify='center'
         alignItems='center'>
         {/*  ERROR*/}
-        {errorLoading.length !== 0 && <Alert className={classes.error} severity="error">{errorLoading}</Alert>}
+        {errorLoading.length !== 0 && <Alert className={classes.alert} severity="error">{errorLoading}</Alert>}
+        {/* DOWNLOAD SUCCESS */}
+        {isDownloadDone &&
+        <Alert className={classes.alert} severity="success">Загрузка завершена</Alert>}
         {/* FORM */}
         <form className={classes.form} noValidate autoComplete='off'>
           <TextField
@@ -101,23 +126,27 @@ const App: React.FC = () => {
             onChange={handleInputChange}
             label='url'
           />
-          <span>{percents} %</span>
-          <Button variant='contained' type='submit' onClick={handleSubmit}>
+          <Button variant='contained' type='submit' onClick={handleSubmit} disabled={isStartLoading}>
             Загрузить
           </Button>
         </form>
-        {/* LOADER */}
-        <div className={classes.loadingSection}>
-          {startLoading && <CircularProgress  color="secondary" />}
-          <LinearProgress variant="determinate" value={10} />
+        {/* LOADING STATUS */}
+        <div className={classes.progressSection}>
+          {loading && <LinearProgress />}
+          {isStartLoading && !loading &&
+          <div>
+            <div className={classes.progressSectionInfo}>
+              <span>{percents} %</span>
+            </div>
+            <LinearProgress variant="determinate" value={percents} />
+          </div>
+          }
         </div>
-        <List>
-          <ListItem>
-
-            <ListItemText primary={videoInfo.title} secondary={videoInfo.duration} />
-          </ListItem>
-
-        </List>
+        {/* INFO VIDEO URL*/}
+        {isStartLoading && !loading && <div className={classes.videoInfo}>
+          <Avatar alt={videoInfo.title} src={videoInfo.avatar} />
+          <p>{videoInfo.title}</p>
+        </div>}
       </Grid>
     </div>
   );

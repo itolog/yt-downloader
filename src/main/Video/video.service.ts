@@ -1,13 +1,13 @@
 import { BrowserWindow } from 'electron';
-import * as fs from 'fs';
 
 import * as ytdl from 'ytdl-core';
-
-
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ffmpeg = require('fluent-ffmpeg');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require('path');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const sanitize = require('sanitize-filename');
+// import sanitize = require('sanitize-filename');
 
 interface Progress {
   frames: string,
@@ -29,30 +29,26 @@ class VideoService {
         quality: 'lowest',
         // filter: 'audioandvideo'
       });
-      console.log(info.ismb);
       const videoInfo = {
         title: info.title,
         duration: info.length_seconds,
-        tumbnail: info.thumbnail_url,
+        avatar: info.author.avatar,
       };
 
       await ffmpeg(videostream)
         .format('mp4')
         .on('start', () => {
-          console.log('start');
           this?.win?.webContents.send('video:start-loading');
         })
         .on('progress', (progress: any) => {
           this?.win?.webContents.send('video:info', { videoInfo, progress });
         })
         .on('end', () => {
-          console.log('end');
           this?.win?.webContents.send('video:end');
         })
-        .save(path.join(__dirname, 'video.mp4'));
+        .save(path.join(__dirname, sanitize(`${info.title}.mp4`)));
     } catch (e) {
       this?.win?.webContents.send('video:download-error', e.message);
-      console.log('from error', e.message);
     }
   }
 }
