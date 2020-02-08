@@ -6,8 +6,6 @@ import 'electron-reload';
 import template from './Menu/menu';
 import VideoService from './Video/video.service';
 
-const videoService = new VideoService();
-
 let mainWindow: BrowserWindow | null;
 
 function createWindow() {
@@ -54,10 +52,6 @@ app.on('activate', () => {
 
 
 ipcMain.on('send-ytb-url', async (event: IpcMainEvent, url: string) => {
- await videoService.download(url).then((res) => {
-    console.log(res);
-    mainWindow?.webContents.send('video-info', res)
-  }).catch((e) => {
-    console.log(e.message);
-  });
+  const videoService = new VideoService(mainWindow);
+  await videoService.download(url);
 });

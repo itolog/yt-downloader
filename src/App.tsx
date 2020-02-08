@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import moment from 'moment';
 
 //  UI
 import CssBaseline from '@material-ui/core/CssBaseline';
@@ -9,7 +10,9 @@ import Button from '@material-ui/core/Button';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
-
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Alert from '@material-ui/lab/Alert';
+import LinearProgress from '@material-ui/core/LinearProgress';
 // style
 import './App.css';
 
@@ -28,21 +31,44 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     justifyContent: 'space-around',
   },
+  error: {
+    position: 'fixed',
+    top: 0,
+  },
+  loadingSection: {
+    minHeight: 150,
+  }
 });
 
 const App: React.FC = () => {
   const classes = useStyles();
   const [inputValue, setInputValue] = useState('');
+  const [startLoading, setStartLoading] = useState(false);
+  const [errorLoading, setErrorLoading] = useState('');
+  const [percents, setPercents] = useState(0);
   const [videoInfo, setVideoInfo] = useState({
     title: '',
     duration: '',
     tumbnail: '',
   });
 
+  const progressStatPercents = (ms: number, infoSeconds: number) => {
+    const takeMs = moment.duration(ms).asMilliseconds();
+    return Math.round((takeMs / (infoSeconds * 1000) * 100))
+  };
+
   useEffect(() => {
-    ipcRenderer.on('video-info', (e: Electron.IpcRendererEvent, video: any) => {
-      console.log(video);
-      setVideoInfo(video);
+    ipcRenderer.on('video:info', (e: Electron.IpcRendererEvent, data: any) => {
+      console.log(data);
+      setVideoInfo(data.videoInfo);
+      setStartLoading(false);
+      setErrorLoading('');
+
+      setPercents(progressStatPercents(data.progress.timemark, data.videoInfo.duration))
+    });
+
+    ipcRenderer.on('video:download-error', (e: Electron.IpcRendererEvent, error: string) => {
+      setErrorLoading(error);
     });
   }, []);
 
@@ -52,8 +78,8 @@ const App: React.FC = () => {
 
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
+    setStartLoading(true);
     ipcRenderer.send('send-ytb-url', inputValue);
-    // setInputValue('');
   };
 
   return (
@@ -65,6 +91,9 @@ const App: React.FC = () => {
         direction='column'
         justify='center'
         alignItems='center'>
+        {/*  ERROR*/}
+        {errorLoading.length !== 0 && <Alert className={classes.error} severity="error">{errorLoading}</Alert>}
+        {/* FORM */}
         <form className={classes.form} noValidate autoComplete='off'>
           <TextField
             id='standard-basic'
@@ -72,10 +101,16 @@ const App: React.FC = () => {
             onChange={handleInputChange}
             label='url'
           />
+          <span>{percents} %</span>
           <Button variant='contained' type='submit' onClick={handleSubmit}>
             Загрузить
           </Button>
         </form>
+        {/* LOADER */}
+        <div className={classes.loadingSection}>
+          {startLoading && <CircularProgress  color="secondary" />}
+          <LinearProgress variant="determinate" value={10} />
+        </div>
         <List>
           <ListItem>
 

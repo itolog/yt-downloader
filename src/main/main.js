@@ -42,7 +42,6 @@ var isDev = require("electron-is-dev");
 require("electron-reload");
 var menu_1 = require("./Menu/menu");
 var video_service_1 = require("./Video/video.service");
-var videoService = new video_service_1["default"]();
 var mainWindow;
 function createWindow() {
     mainWindow = new electron_1.BrowserWindow({
@@ -77,15 +76,12 @@ electron_1.app.on('activate', function () {
     }
 });
 electron_1.ipcMain.on('send-ytb-url', function (event, url) { return __awaiter(void 0, void 0, void 0, function () {
+    var videoService;
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, videoService.download(url).then(function (res) {
-                    var _a;
-                    console.log(res);
-                    (_a = mainWindow) === null || _a === void 0 ? void 0 : _a.webContents.send('video-info', res);
-                })["catch"](function (e) {
-                    console.log(e.message);
-                })];
+            case 0:
+                videoService = new video_service_1["default"](mainWindow);
+                return [4 /*yield*/, videoService.download(url)];
             case 1:
                 _a.sent();
                 return [2 /*return*/];
