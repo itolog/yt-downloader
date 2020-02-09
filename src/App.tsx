@@ -10,7 +10,9 @@ import Button from '@material-ui/core/Button';
 import Alert from '@material-ui/lab/Alert';
 import LinearProgress from '@material-ui/core/LinearProgress';
 import Avatar from '@material-ui/core/Avatar';
-
+import IconButton from '@material-ui/core/IconButton';
+import FolderIcon from '@material-ui/icons/Folder';
+import Snackbar from '@material-ui/core/Snackbar';
 // style
 import './App.css';
 
@@ -24,7 +26,7 @@ const useStyles = makeStyles({
   form: {
     display: 'flex',
     height: 200,
-    minWidth: 300,
+    minWidth: '70%',
     maxWidth: 600,
     flexDirection: 'column',
     justifyContent: 'space-around',
@@ -49,6 +51,12 @@ const useStyles = makeStyles({
     display: 'flex',
     justifyContent: 'space-around',
   },
+  formInput: {
+    minWidth: '80%',
+  },
+  folderPath: {
+    height: '10px',
+  },
 });
 
 const App: React.FC = () => {
@@ -57,8 +65,11 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isStartLoading, setIsStartLoading] = useState(false);
   const [errorLoading, setErrorLoading] = useState('');
+  const [folderPath, setFolderPath] = useState('');
   const [isDownloadDone, setIsDownloadDone] = useState(false);
+  const [isAlldDone, setIsAllDone] = useState(false);
   const [percents, setPercents] = useState(0);
+  const [open, setOpen] = React.useState(false);
   const [videoInfo, setVideoInfo] = useState({
     title: '',
     duration: '',
@@ -85,17 +96,54 @@ const App: React.FC = () => {
       setIsDownloadDone(true);
     });
 
+    ipcRenderer.on('post:process-done', () => {
+      setIsAllDone(true);
+      setIsDownloadDone(false);
+    });
+
     ipcRenderer.on('video:download-error', (e: Electron.IpcRendererEvent, error: string) => {
       setErrorLoading(error);
     });
+
+    ipcRenderer.on('folder-path', (e: Electron.IpcRendererEvent, folderPath: string) => {
+      setFolderPath(folderPath);
+    });
+
   }, []);
+
+  useEffect(() => {
+
+    if (folderPath === '') {
+      console.log('empty');
+    }
+  }, [folderPath]);
+
+  //
+  const handleClose = (event?: React.SyntheticEvent, reason?: string) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+
+    setOpen(false);
+  };
+  //
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
   };
 
+  const pickFolder = () => {
+    ipcRenderer.send('open-folder-dialog');
+  };
+
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
+    if (folderPath === '') {
+      setOpen(true);
+      return false;
+    } else {
+      setOpen(false);
+    }
     if (inputValue.length > 0) {
       setIsDownloadDone(false);
       setLoading(true);
@@ -103,6 +151,7 @@ const App: React.FC = () => {
       ipcRenderer.send('send-ytb-url', inputValue);
     }
   };
+
 
   return (
     <div>
@@ -117,15 +166,40 @@ const App: React.FC = () => {
         {errorLoading.length !== 0 && <Alert className={classes.alert} severity="error">{errorLoading}</Alert>}
         {/* DOWNLOAD SUCCESS */}
         {isDownloadDone &&
+        <Alert className={classes.alert} severity="info">Завершение загрузки ....</Alert>}
+        {/* ALL DONE */}
+        {isAlldDone &&
         <Alert className={classes.alert} severity="success">Загрузка завершена</Alert>}
+        {/*  WARRRN EMPY PATH DIRECTORY */}
+        <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+          <Alert onClose={handleClose} severity="warning">
+            Выберете папку для сохраненния!
+          </Alert>
+        </Snackbar>
         {/* FORM */}
         <form className={classes.form} noValidate autoComplete='off'>
-          <TextField
-            id='standard-basic'
-            value={inputValue}
-            onChange={handleInputChange}
-            label='url'
-          />
+          <Grid
+            container
+            direction="row"
+            justify="space-around"
+            alignItems="center"
+          >
+            <TextField
+              className={classes.formInput}
+              id='standard-basic'
+              value={inputValue}
+              onChange={handleInputChange}
+              label='url'
+            />
+            <IconButton
+              color="primary"
+              aria-label="folder"
+              onClick={pickFolder}
+              component="span">
+              <FolderIcon style={{ color: 'brown' }} />
+            </IconButton>
+          </Grid>
+          <span className={classes.folderPath}>{folderPath}</span>
           <Button variant='contained' type='submit' onClick={handleSubmit} disabled={isStartLoading}>
             Загрузить
           </Button>

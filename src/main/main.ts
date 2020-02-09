@@ -5,6 +5,7 @@ import 'electron-reload';
 
 import template from './Menu/menu';
 import VideoService from './Video/video.service';
+import FileSystemService from './services/FileSysytem/fileSystem.service';
 
 let mainWindow: BrowserWindow | null;
 
@@ -55,3 +56,13 @@ ipcMain.on('send-ytb-url', async (event: IpcMainEvent, url: string) => {
   const videoService = new VideoService(mainWindow);
   await videoService.download(url);
 });
+
+ipcMain.on('open-folder-dialog', async (event: IpcMainEvent) => {
+  if (mainWindow) {
+    const fileSystemService = new FileSystemService(mainWindow);
+    await fileSystemService.openFolder();
+  }
+
+});
+
+// mainWindow.webContents.send('open-folder', )

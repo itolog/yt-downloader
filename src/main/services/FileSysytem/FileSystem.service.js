@@ -37,71 +37,38 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 var electron_1 = require("electron");
+var fs_1 = require("fs");
 var path = require("path");
-var isDev = require("electron-is-dev");
-require("electron-reload");
-var menu_1 = require("./Menu/menu");
-var video_service_1 = require("./Video/video.service");
-var fileSystem_service_1 = require("./services/FileSysytem/fileSystem.service");
-var mainWindow;
-function createWindow() {
-    mainWindow = new electron_1.BrowserWindow({
-        darkTheme: true,
-        width: 800,
-        height: 600,
-        webPreferences: {
-            nodeIntegration: true
-        }
-    });
-    mainWindow.loadURL(isDev
-        ? 'http://localhost:3000'
-        : "file://" + path.join(__dirname, '../build/index.html'));
-    //  MENU
-    var menu = electron_1.Menu.buildFromTemplate(menu_1["default"](electron_1.app, mainWindow));
-    electron_1.Menu.setApplicationMenu(menu);
-    //
-    mainWindow.on('closed', function () {
-        mainWindow = null;
-    });
-}
-electron_1.app.allowRendererProcessReuse = true;
-electron_1.app.on('ready', createWindow);
-electron_1.app.on('window-all-closed', function () {
-    if (process.platform !== 'darwin') {
-        electron_1.app.quit();
+var config_1 = require("../../../shared/config");
+var FileSystemService = /** @class */ (function () {
+    function FileSystemService(win) {
+        this.win = win;
     }
-});
-electron_1.app.on('activate', function () {
-    if (mainWindow === null) {
-        createWindow();
-    }
-});
-electron_1.ipcMain.on('send-ytb-url', function (event, url) { return __awaiter(void 0, void 0, void 0, function () {
-    var videoService;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                videoService = new video_service_1["default"](mainWindow);
-                return [4 /*yield*/, videoService.download(url)];
-            case 1:
-                _a.sent();
-                return [2 /*return*/];
-        }
-    });
-}); });
-electron_1.ipcMain.on('open-folder-dialog', function (event) { return __awaiter(void 0, void 0, void 0, function () {
-    var fileSystemService;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                if (!mainWindow) return [3 /*break*/, 2];
-                fileSystemService = new fileSystem_service_1["default"](mainWindow);
-                return [4 /*yield*/, fileSystemService.openFolder()];
-            case 1:
-                _a.sent();
-                _a.label = 2;
-            case 2: return [2 /*return*/];
-        }
-    });
-}); });
-// mainWindow.webContents.send('open-folder', )
+    FileSystemService.prototype.openFolder = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var folder;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, electron_1.dialog.showOpenDialog(this.win, {
+                            properties: ['openDirectory']
+                        })];
+                    case 1:
+                        folder = _a.sent();
+                        if (folder) {
+                            fs_1.writeFile(path.join(process.cwd(), 'uploads', config_1.config.pathFileName), folder.filePaths[0], 'utf8', function (err) {
+                                if (err)
+                                    throw err;
+                            });
+                            this.win.webContents.send('folder-path', folder.filePaths[0]);
+                        }
+                        else {
+                            this.win.webContents.send('folder-path', '');
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    return FileSystemService;
+}());
+exports["default"] = FileSystemService;
