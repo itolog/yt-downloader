@@ -1,8 +1,26 @@
 {
-  "name": "downloader",
-  "version": "0.1.0",
+  "name": "downloader-ytb",
+  "description": "video downloader",
+  "author": "gamonya jeden",
+  "version": "1.0.0",
   "private": true,
   "main": "src/main/main.js",
+  "build": {
+    "productName": "ytb-downloader",
+    "appId": "org.ytbitdown.id",
+    "files": [
+      "build/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "src/assets"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    }
+  },
+  "homepage": "./",
   "dependencies": {
     "@material-ui/core": "^4.9.1",
     "@material-ui/icons": "^4.9.1",
@@ -15,11 +33,19 @@
     "react-scripts": "3.3.0",
     "sanitize-filename": "^1.6.3",
     "typeface-roboto": "0.0.75",
-    "ytdl-core": "^1.0.7"
+    "ytdl-core": "^1.0.7",
+    "electron-is-dev": "^1.1.0",
+    "electron-reload": "^1.5.0"
   },
   "scripts": {
+    "gulp": "gulp",
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "react-build": "react-scripts build",
+    "el-build": "electron-builder",
+    "electron-pack": "build --em.main=build/electron.js",
+    "postinstall": "electron-builder install-app-deps",
+    "preelectron-pack": "yarn build",
+    "build": "yarn react-build && yarn el-build build --win --x64",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "electron": "electron .",
@@ -54,8 +80,7 @@
     "concurrently": "^5.1.0",
     "cross-env": "^6.0.3",
     "electron": "^8.0.0",
-    "electron-is-dev": "^1.1.0",
-    "electron-reload": "^1.5.0",
+    "electron-builder": "^22.3.2",
     "eslint": "^6.8.0",
     "eslint-config-airbnb": "^18.0.1",
     "eslint-config-prettier": "^6.10.0",
@@ -64,6 +89,12 @@
     "eslint-plugin-prettier": "^3.1.2",
     "eslint-plugin-react": "^7.18.3",
     "eslint-plugin-react-hooks": "^2.3.0",
+    "gulp": "^4.0.2",
+    "gulp-clean": "^0.4.0",
+    "gulp-concat": "^2.6.1",
+    "gulp-copy": "^4.0.1",
+    "gulp-rename": "^2.0.0",
+    "gulp-uglify": "^3.0.2",
     "nodemon": "^2.0.2",
     "typescript": "^3.7.5",
     "wait-on": "^3.3.0"

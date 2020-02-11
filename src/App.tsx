@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import moment from 'moment';
-
 //  UI
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Grid from '@material-ui/core/Grid';
@@ -12,16 +11,20 @@ import LinearProgress from '@material-ui/core/LinearProgress';
 import Avatar from '@material-ui/core/Avatar';
 import IconButton from '@material-ui/core/IconButton';
 import FolderIcon from '@material-ui/icons/Folder';
+import FolderOpenIcon from '@material-ui/icons/FolderOpen';
 import Snackbar from '@material-ui/core/Snackbar';
-// style
-import './App.css';
+
+import { Progress } from './shared/interface/progress';
 
 const { ipcRenderer } = window.require('electron');
 
 const useStyles = makeStyles({
-  // style rule
   root: {
+    paddingTop: '50px',
     height: '100vh',
+  },
+  wrappSelect: {
+    height: '100px',
   },
   form: {
     display: 'flex',
@@ -57,10 +60,14 @@ const useStyles = makeStyles({
   folderPath: {
     height: '10px',
   },
+  currenProgressInfo: {
+    minWidth: '150px',
+  },
 });
 
 const App: React.FC = () => {
   const classes = useStyles();
+  // state
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [isStartLoading, setIsStartLoading] = useState(false);
@@ -70,6 +77,7 @@ const App: React.FC = () => {
   const [isAlldDone, setIsAllDone] = useState(false);
   const [percents, setPercents] = useState(0);
   const [open, setOpen] = React.useState(false);
+  const [progressState, setProgressState] = React.useState<Progress>();
   const [videoInfo, setVideoInfo] = useState({
     title: '',
     duration: '',
@@ -82,29 +90,31 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    // INFO FROM PROGRESS VIDOE DOWNLOAD
     ipcRenderer.on('video:info', (e: Electron.IpcRendererEvent, data: any) => {
-      console.log(data);
       setVideoInfo(data.videoInfo);
       setLoading(false);
       setErrorLoading('');
 
+      setProgressState(data.progress);
       setPercents(progressStatPercents(data.progress.timemark, data.videoInfo.duration));
     });
-
+    // END DOWNLOAD
     ipcRenderer.on('video:end', () => {
       setIsStartLoading(false);
       setIsDownloadDone(true);
     });
-
+    // .. ALL DONE
     ipcRenderer.on('post:process-done', () => {
       setIsAllDone(true);
       setIsDownloadDone(false);
+      setInputValue('');
     });
-
+    // END MOVE VIDEO TO USER STORAGE.
     ipcRenderer.on('video:download-error', (e: Electron.IpcRendererEvent, error: string) => {
       setErrorLoading(error);
     });
-
+    // GET PATH SAVE FOLDER
     ipcRenderer.on('folder-path', (e: Electron.IpcRendererEvent, folderPath: string) => {
       setFolderPath(folderPath);
     });
@@ -113,10 +123,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
 
-    if (folderPath === '') {
-      console.log('empty');
+    if (errorLoading.length !== 0) {
+      setIsStartLoading(false);
     }
-  }, [folderPath]);
+  }, [errorLoading]);
 
   //
   const handleClose = (event?: React.SyntheticEvent, reason?: string) => {
@@ -138,6 +148,7 @@ const App: React.FC = () => {
 
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
+    setIsAllDone(false);
     if (folderPath === '') {
       setOpen(true);
       return false;
@@ -153,6 +164,10 @@ const App: React.FC = () => {
   };
 
 
+  const openSaveFolder = () => {
+    ipcRenderer.send('open-saver-folder', folderPath);
+  };
+
   return (
     <div>
       <CssBaseline />
@@ -160,7 +175,7 @@ const App: React.FC = () => {
         className={classes.root}
         container
         direction='column'
-        justify='center'
+        justify='flex-start'
         alignItems='center'>
         {/*  ERROR*/}
         {errorLoading.length !== 0 && <Alert className={classes.alert} severity="error">{errorLoading}</Alert>}
@@ -176,7 +191,6 @@ const App: React.FC = () => {
             Выберете папку для сохраненния!
           </Alert>
         </Snackbar>
-        {/* FORM */}
         <form className={classes.form} noValidate autoComplete='off'>
           <Grid
             container
@@ -199,7 +213,21 @@ const App: React.FC = () => {
               <FolderIcon style={{ color: 'brown' }} />
             </IconButton>
           </Grid>
-          <span className={classes.folderPath}>{folderPath}</span>
+          <Grid
+            container
+            direction="row"
+            justify="space-around"
+            alignItems="center"
+            className={classes.folderPath}>
+            <span>{folderPath}</span>
+            {isAlldDone && <IconButton
+              onClick={openSaveFolder}
+              color="primary"
+              aria-label="folder"
+              component="span">
+              <FolderOpenIcon />
+            </IconButton>}
+          </Grid>
           <Button variant='contained' type='submit' onClick={handleSubmit} disabled={isStartLoading}>
             Загрузить
           </Button>
@@ -210,7 +238,8 @@ const App: React.FC = () => {
           {isStartLoading && !loading &&
           <div>
             <div className={classes.progressSectionInfo}>
-              <span>{percents} %</span>
+              <span className={classes.currenProgressInfo}>{percents} %</span>
+              <span className={classes.currenProgressInfo}>скорость: {progressState?.currentKbps}/kbps</span>
             </div>
             <LinearProgress variant="determinate" value={percents} />
           </div>

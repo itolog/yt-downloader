@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, ipcMain, IpcMainEvent } from 'electron';
 import * as path from 'path';
 import * as isDev from 'electron-is-dev';
+import { mkdir, existsSync } from 'fs';
 import 'electron-reload';
 
 import template from './Menu/menu';
@@ -14,6 +15,7 @@ function createWindow() {
     darkTheme: true,
     width: 800,
     height: 600,
+    title: 'ytb-downloader',
     webPreferences: {
       nodeIntegration: true,
     },
@@ -27,7 +29,18 @@ function createWindow() {
 
   //  MENU
   const menu = Menu.buildFromTemplate(template(app, mainWindow));
-  Menu.setApplicationMenu(menu);
+  if (isDev) {
+    Menu.setApplicationMenu(menu);
+  } else {
+    Menu.setApplicationMenu(null);
+  }
+  // Create Uploads folder
+  const pathUploadsDir = path.join(process.cwd(), 'uploads');
+  if (!existsSync(pathUploadsDir))  {
+    mkdir(pathUploadsDir,   (err) => {
+      if (err) throw err;
+    });
+  };
 
   //
   mainWindow.on('closed', () => {
@@ -53,8 +66,10 @@ app.on('activate', () => {
 
 
 ipcMain.on('send-ytb-url', async (event: IpcMainEvent, url: string) => {
-  const videoService = new VideoService(mainWindow);
-  await videoService.download(url);
+  if (mainWindow) {
+    const videoService = new VideoService(mainWindow);
+    await videoService.download(url);
+  }
 });
 
 ipcMain.on('open-folder-dialog', async (event: IpcMainEvent) => {
@@ -62,7 +77,12 @@ ipcMain.on('open-folder-dialog', async (event: IpcMainEvent) => {
     const fileSystemService = new FileSystemService(mainWindow);
     await fileSystemService.openFolder();
   }
-
 });
 
-// mainWindow.webContents.send('open-folder', )
+ipcMain.on('open-saver-folder', async (event: IpcMainEvent, url: string) => {
+  if (mainWindow) {
+    const fileSystemService = new FileSystemService(mainWindow);
+    await fileSystemService.openSaveDirectory(url);
+  }
+});
+
